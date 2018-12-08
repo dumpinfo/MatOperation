@@ -1,10 +1,34 @@
 /* Some simple mathematical functions. Don't look for some logic in
    the function names :-) */
-
+#ifndef __MatMatrix_H_INCLUDED__
+#define __MatMatrix_H_INCLUDED__
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include "Matrix.h"
+
+inline void sinCos(float *returnSin, float *returnCos, float theta) {
+
+	// For simplicity, we'll just use the normal trig functions.
+	// Note that on some platforms we may be able to do better
+
+	*returnSin = sin(theta);
+	*returnCos = cos(theta);
+}
+
+inline float safeAcos(float x) {
+
+        // Check limit conditions
+        if (x <= -1.0f) {
+                return 3.1415926;//kPi;
+        }
+        if (x >= 1.0f) {
+                return 0.0f;
+        }
+        // Value is in the domain - use standard C function
+        return acos(x);
+}
+
 
 class TMat4
 {
@@ -13,6 +37,7 @@ class TMat4
  Matrix<double> m;
 };
 
+typedef  TMat4 RotationMatrix;
 
 class TMat3
 {
@@ -21,21 +46,77 @@ class TMat3
  Matrix<double> m;
 };
 
+
+class Matrix4x3
+{
+ public:
+ Matrix4x3(){ m.SetDimension(4,3);};
+ Matrix<double> m;
+};
+
 class TVector3
 {
   public:
+  TVector3(){}
+  TVector3(double inX, double inY, double inZ)
+  { X = inX; Y = inY; Z = inZ; }
+ // (1.0f, 0.0f, 0.0f)
   double X,Y,Z;
 };
+
+
+inline float vectorMag(const TVector3 &a) {
+	return sqrt(a.X*a.X + a.Y*a.Y + a.Z*a.Z);
+}
+
+// Compute the cross product of two vectors
+
+inline TVector3 crossProduct(const TVector3 &a, const TVector3 &b) {
+	return TVector3(
+		a.Y*b.Z - a.Z*b.Y,
+		a.Z*b.X - a.X*b.Z,
+		a.X*b.Y - a.Y*b.X
+	);
+}
+
+// Scalar on the left multiplication, for symmetry
+
+inline TVector3 operator *(float k, const TVector3 &v) {
+	return TVector3(k*v.X, k*v.Y, k*v.Z);
+}
+
+// Compute the distance between two points
+
+inline float distance(const TVector3 &a, const TVector3 &b) {
+	float dx = a.X - b.X;
+	float dy = a.Y - b.Y;
+	float dz = a.Z - b.Z;
+	return sqrt(dx*dx + dy*dy + dz*dz);
+}
+
+// Compute the distance between two points, squared.  Often useful
+// when comparing distances, since the square root is slow
+
+inline float distanceSquared(const TVector3 &a, const TVector3 &b) {
+	float dx = a.X - b.X;
+	float dy = a.Y - b.Y;
+	float dz = a.Z - b.Z;
+	return dx*dx + dy*dy + dz*dz;
+}
+
 
 class TVector4
 {
   public:
+  TVector4(){}
+  TVector4(double inX, double inY, double inZ, double inW)
+  { X = inX; Y = inY; Z = inZ; W = inW; }
   double X,Y,Z,W;
 };
 
 /* ******* Gestion des matrices 4x4 ****** */
 
-void gl_M4_Id(TMat4 *a)
+void inline gl_M4_Id(TMat4 *a)
 {
 	int i,j;
 	for(i=0;i<4;i++)
@@ -55,7 +136,7 @@ int gl_M4_IsId(TMat4 *a)
   return 1;
 }
 
-void gl_M4_Mul(TMat4 *c,TMat4 *a,TMat4 *b)
+void inline gl_M4_Mul(TMat4 *c,TMat4 *a,TMat4 *b)
 {
   int i,j,k;
   double s;
@@ -68,7 +149,7 @@ void gl_M4_Mul(TMat4 *c,TMat4 *a,TMat4 *b)
 }
 
 /* c=c*a */
-void gl_M4_MulLeft(TMat4 *c,TMat4 *b)
+void inline gl_M4_MulLeft(TMat4 *c,TMat4 *b)
 {
   int i,j,k;
   double s;
@@ -86,7 +167,7 @@ void gl_M4_MulLeft(TMat4 *c,TMat4 *b)
     }
 }
 
-void gl_M4_Move(TMat4 *a,TMat4 *b)
+void inline gl_M4_Move(TMat4 *a,TMat4 *b)
 {
 	memcpy(a,b,sizeof(TMat4));
 }
@@ -94,21 +175,21 @@ void gl_M4_Move(TMat4 *a,TMat4 *b)
  
 
 
-void gl_MulM4V3(TVector3 *a,TMat4 *b,TVector3 *c)
+void inline gl_MulM4V3(TVector3 *a,TMat4 *b,TVector3 *c)
 {
 	 a->X=b->m[0][0]*c->X+b->m[0][1]*c->Y+b->m[0][2]*c->Z+b->m[0][3];
 	 a->Y=b->m[1][0]*c->X+b->m[1][1]*c->Y+b->m[1][2]*c->Z+b->m[1][3];
 	 a->Z=b->m[2][0]*c->X+b->m[2][1]*c->Y+b->m[2][2]*c->Z+b->m[2][3];
 }
 
-void gl_MulM3V3(TVector3 *a,TMat3 *b,TVector3 *c)
+void inline gl_MulM3V3(TVector3 *a,TMat3 *b,TVector3 *c)
 {
 	 a->X=b->m[0][0]*c->X+b->m[0][1]*c->Y+b->m[0][2]*c->Z;
 	 a->Y=b->m[1][0]*c->X+b->m[1][1]*c->Y+b->m[1][2]*c->Z;
 	 a->Z=b->m[2][0]*c->X+b->m[2][1]*c->Y+b->m[2][2]*c->Z;
 }
 
-void gl_M4_MulV4(TVector4 *a,TMat4 *b,TVector4 *c)
+void inline gl_M4_MulV4(TVector4 *a,TMat4 *b,TVector4 *c)
 {
 	 a->X=b->m[0][0]*c->X+b->m[0][1]*c->Y+b->m[0][2]*c->Z+b->m[0][3]*c->W;
 	 a->Y=b->m[1][0]*c->X+b->m[1][1]*c->Y+b->m[1][2]*c->Z+b->m[1][3]*c->W;
@@ -117,7 +198,7 @@ void gl_M4_MulV4(TVector4 *a,TMat4 *b,TVector4 *c)
 }
 	
 /* transposition of a 4x4 matrix */
-void gl_M4_Transpose(TMat4 *a,TMat4 *b)
+void inline gl_M4_Transpose(TMat4 *a,TMat4 *b)
 {
   a->m[0][0]=b->m[0][0]; 
   a->m[0][1]=b->m[1][0]; 
@@ -141,7 +222,7 @@ void gl_M4_Transpose(TMat4 *a,TMat4 *b)
 }
 
 /* inversion of an orthogonal matrix of type Y=M.X+P */ 
-void gl_M4_InvOrtho(TMat4 *a,TMat4 b)
+void inline gl_M4_InvOrtho(TMat4 *a,TMat4 b)
 {
 	int i,j;
 	double s;
@@ -158,7 +239,7 @@ void gl_M4_InvOrtho(TMat4 *a,TMat4 b)
 /* Inversion of a general nxn matrix.
    Note : m is destroyed */
 
-int Matrix_Inv(double *r,double *m,int n)
+int inline Matrix_Inv(double *r,double *m,int n)
 {
 	 int i,j,k,l;
 	 double max,tmp,t;
@@ -218,7 +299,7 @@ int Matrix_Inv(double *r,double *m,int n)
 
 /* inversion of a 4x4 matrix */
 
-void gl_M4_Inv(TMat4 *a,TMat4 *b)
+void inline gl_M4_Inv(TMat4 *a,TMat4 *b)
 {
   TMat4 tmp;
   memcpy(&tmp, b, 16*sizeof(double));
@@ -226,7 +307,7 @@ void gl_M4_Inv(TMat4 *a,TMat4 *b)
   Matrix_Inv(&a->m[0][0],&tmp.m[0][0],4);
 }
 
-void gl_M4_Rotate(TMat4 *a,double t,int u)
+void inline gl_M4_Rotate(TMat4 *a,double t,int u)
 {
 	 double s,c;
 	 int v,w;
@@ -241,7 +322,7 @@ void gl_M4_Rotate(TMat4 *a,double t,int u)
 	
 
 /* inverse of a 3x3 matrix */
-void gl_M3_Inv(TMat3 *a,TMat3 *m)
+void inline gl_M3_Inv(TMat3 *a,TMat3 *m)
 {
 	 double det;
 	 
@@ -265,7 +346,7 @@ void gl_M3_Inv(TMat3 *a,TMat3 *m)
 																										
 /* vector arithmetic */
 
-int gl_V3_Norm(TVector3 *a)
+int inline gl_V3_Norm(TVector3 *a)
 {
 	double n;
 	n=sqrt(a->X*a->X+a->Y*a->Y+a->Z*a->Z);
@@ -276,7 +357,7 @@ int gl_V3_Norm(TVector3 *a)
 	return 0;
 }
 
-TVector3 gl_V3_New(double x,double y,double z)
+TVector3 inline gl_V3_New(double x,double y,double z)
 {
 	 TVector3 a;
 	 a.X=x;
@@ -285,7 +366,7 @@ TVector3 gl_V3_New(double x,double y,double z)
 	 return a;
 }
 
-TVector4 gl_V4_New(double x,double y,double z,double w)
+TVector4 inline gl_V4_New(double x,double y,double z,double w)
 {
   TVector4 a;
   a.X=x;
@@ -295,4 +376,5 @@ TVector4 gl_V4_New(double x,double y,double z,double w)
   return a;
 }
 
+#endif
 

@@ -5,7 +5,7 @@
 #include "Quaternion.h"
 
 
-void Quaternion2RotMatrix(const Quaternion &q, Matrix<double>&m)
+void Quaternion2RotMatrix(const Quaternion &q, Matrix&m)
  {
     m.SetDimension(3,3);
 	m[0][0] = 1.0f - 2.0f * (q.y*q.y + q.z*q.z);                                         
